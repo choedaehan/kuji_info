@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql" // MariaDB 사용 시에도 mysql provider 사용
+  url      = env("DATABASE_URL")
+}
+
+model Ip {
+  id           Int        @id @default(autoincrement())
+  name         String
+  englishName  String?
+  originalName String?
+  officialUrl  String?
+  description  String?    @db.Text
+  status       IpStatus   @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  goods        Goods[]
+  ipEvents     IpEvent[]
+
+  @@index([name])
+  @@map("ips")
+}
+
+model Goods {
+  id                Int       @id @default(autoincrement())
+  ipId              Int
+  ipEventId         Int?
+  name              String
+  goodsType         String?
+  officialPrice     Int?
+  releaseDate       DateTime?
+  officialUrl       String?
+  thumbnailImageUrl String?
+  description       String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  ip                Ip        @relation(fields: [ipId], references: [id])
+  ipEvent           IpEvent?  @relation(fields: [ipEventId], references: [id])
+
+  @@index([ipId])
+  @@index([ipEventId])
+  @@index([name])
+  @@map("goods")
+}
+
+model IpEvent {
+  id          Int       @id @default(autoincrement())
+  ipId        Int
+  name        String
+  startDate   DateTime?
+  endDate     DateTime?
+  location    String?
+  officialUrl String?
+  description String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  ip          Ip        @relation(fields: [ipId], references: [id])
+  goods       Goods[]
+
+  @@index([ipId])
+  @@index([name])
+  @@map("ip_events")
+}
+
+enum IpStatus {
+  ACTIVE
+  INACTIVE
+}

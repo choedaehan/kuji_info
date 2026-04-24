@@ -52,7 +52,7 @@ export default function IpEventCreatePage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/ip-event', {
+      const response = await fetch('/api/ip-events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

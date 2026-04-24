@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       name,
       goodsType,
       officialPrice,
+      isNotForSale,
       releaseDate,
       officialUrl,
       thumbnailImageUrl,
@@ -53,11 +54,16 @@ export async function POST(request: Request) {
         ipEventId: ipEventId ? Number(ipEventId) : null,
         name,
         goodsType: goodsType || null,
-        officialPrice: officialPrice ? Number(officialPrice) : null,
+        officialPrice: isNotForSale ? null : officialPrice ? Number(officialPrice) : null,
+        isNotForSale: Boolean(isNotForSale),
         releaseDate: releaseDate ? new Date(releaseDate) : null,
         officialUrl: officialUrl || null,
         thumbnailImageUrl: thumbnailImageUrl || null,
         description: description || null,
+      },
+      include: {
+        ip: true,
+        ipEvent: true,
       },
     });
 

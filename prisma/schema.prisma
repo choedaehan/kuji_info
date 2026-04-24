@@ -39,6 +39,7 @@ model Goods {
   name              String
   goodsType         String?
   officialPrice     Int?
+  isNotForSale      Boolean   @default(false)
   releaseDate       DateTime?
   officialUrl       String?
   thumbnailImageUrl String?

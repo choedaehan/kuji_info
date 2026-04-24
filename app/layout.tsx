@@ -84,10 +84,11 @@ function Nav() {
       <NavItem href="/">메인</NavItem>
 
       <Section title="관리">
-        <NavItem href="/ips/new">IP 등록</NavItem>
-        <NavItem href="/ips">IP 리스트</NavItem>
-        <NavItem href="/goods/new">굿즈 등록</NavItem>
+        <NavItem href="/ips">IP 관리</NavItem>
         <NavItem href="/ip-events/new">이벤트 등록</NavItem>
+        <NavItem href="/ip-events">이벤트 관리</NavItem>
+        <NavItem href="/goods">굿즈 관리</NavItem>
+        
         <NavItem href="/kuji-series/new">쿠지 시리즈 등록</NavItem>
         <NavItem href="/kuji-prize/new">상품 등록</NavItem>
         <NavItem href="/kuji-observation/new">

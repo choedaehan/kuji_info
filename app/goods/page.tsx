@@ -1,5 +1,5 @@
 'use client';
-
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 type GoodsItem = {
@@ -7,6 +7,7 @@ type GoodsItem = {
   name: string;
   goodsType: string | null;
   officialPrice: number | null;
+  isNotForSale: Boolean;
   releaseDate: string | null;
   officialUrl: string | null;
   thumbnailImageUrl: string | null;
@@ -24,6 +25,7 @@ type GoodsItem = {
 };
 
 export default function GoodsListPage() {
+  const router = useRouter();
   const [goodsList, setGoodsList] = useState<GoodsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -75,7 +77,11 @@ export default function GoodsListPage() {
         ) : (
           <div style={styles.list}>
             {goodsList.map((goods) => (
-              <div key={goods.id} style={styles.item}>
+              <div
+                key={goods.id}
+                style={styles.item}
+                onClick={() => router.push(`/goods/${goods.id}`)}
+              >
                 <div style={styles.leftSection}>
                   {goods.thumbnailImageUrl ? (
                     <img
@@ -104,9 +110,11 @@ export default function GoodsListPage() {
                     </p>
 
                     <p style={styles.meta}>
-                      공식 가격: {goods.officialPrice !== null
-                        ? `${goods.officialPrice.toLocaleString('ko-KR')}원`
-                        : '-'}
+                      공식 가격: {goods.isNotForSale
+                        ? '비매품'
+                        : goods.officialPrice !== null
+                          ? `${goods.officialPrice.toLocaleString('ko-KR')}원`
+                          : '-'}
                     </p>
 
                     <p style={styles.meta}>
@@ -125,6 +133,7 @@ export default function GoodsListPage() {
                         target="_blank"
                         rel="noreferrer"
                         style={styles.link}
+                        onClick={(event) => event.stopPropagation()}
                       >
                         공식 링크 이동
                       </a>
@@ -187,6 +196,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: '1px solid #e5e7eb',
     borderRadius: 8,
     padding: 16,
+    cursor: 'pointer',
   },
   leftSection: {
     display: 'flex',

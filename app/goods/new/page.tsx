@@ -22,6 +22,7 @@ export default function GoodsCreatePage() {
   const [name, setName] = useState('');
   const [goodsType, setGoodsType] = useState('');
   const [officialPrice, setOfficialPrice] = useState('');
+  const [isNotForSale, setIsNotForSale] = useState(false);
   const [releaseDate, setReleaseDate] = useState('');
   const [officialUrl, setOfficialUrl] = useState('');
   const [thumbnailImageUrl, setThumbnailImageUrl] = useState('');
@@ -46,6 +47,15 @@ export default function GoodsCreatePage() {
     setOfficialPrice(rawValue);
   };
 
+  const handleChangeIsNotForSale = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    setIsNotForSale(checked);
+
+    if(checked) {
+      setOfficialPrice('');
+    }
+  };
+
   const getIpList = async () => {
     try {
       const response = await fetch('/api/ip', {
@@ -67,7 +77,7 @@ export default function GoodsCreatePage() {
 
   const getIpEventList = async () => {
     try {
-      const response = await fetch('/api/ip-event', {
+      const response = await fetch('/api/ip-events', {
         method: 'GET',
       });
 
@@ -120,7 +130,8 @@ export default function GoodsCreatePage() {
           ipEventId,
           name,
           goodsType,
-          officialPrice: officialPrice === '' ? null : Number(officialPrice),
+          officialPrice: isNotForSale ? null : officialPrice === '' ? null : Number(officialPrice),
+          isNotForSale,
           releaseDate,
           officialUrl,
           thumbnailImageUrl,
@@ -141,6 +152,7 @@ export default function GoodsCreatePage() {
       setName('');
       setGoodsType('');
       setOfficialPrice('');
+      setIsNotForSale(false);
       setReleaseDate('');
       setOfficialUrl('');
       setThumbnailImageUrl('');
@@ -209,14 +221,30 @@ export default function GoodsCreatePage() {
           />
         </div>
 
+        <div style={styles.checkboxField}>
+          <label style={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={isNotForSale}
+              onChange={handleChangeIsNotForSale}
+            />
+            비매품
+          </label>
+        </div>
+
         <div style={styles.field}>
           <label style={styles.label}>공식 가격</label>
           <input
             type="text"
-            style={styles.input}
+            style={{
+              ...styles.input,
+              ...styles.priceInput,
+              ...(isNotForSale ? styles.disabledInput : {}),
+            }}
             value={displayOfficialPrice}
             onChange={handleChangeOfficialPrice}
             placeholder="예: 15,000"
+            disabled={isNotForSale}
           />
         </div>
 
@@ -301,11 +329,22 @@ const styles: { [key: string]: React.CSSProperties } = {
   field: {
     marginBottom: 16,
   },
+  checkboxField: {
+    marginBottom: 16,
+  },
   label: {
     display: 'block',
     marginBottom: 6,
     fontSize: 14,
     fontWeight: 600,
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
   },
   input: {
     width: '100%',
@@ -315,6 +354,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: '1px solid #dcdfe3',
     fontSize: 14,
     boxSizing: 'border-box',
+  },
+  priceInput: {
+    textAlign: 'left',
+  },
+  disabledInput: {
+    backgroundColor: '#f3f4f6',
+    color: '#9ca3af',
+    cursor: 'not-allowed',
   },
   textarea: {
     width: '100%',

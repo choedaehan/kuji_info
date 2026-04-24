@@ -85,7 +85,6 @@ function Nav() {
 
       <Section title="관리">
         <NavItem href="/ips">IP 관리</NavItem>
-        <NavItem href="/ip-events/new">이벤트 등록</NavItem>
         <NavItem href="/ip-events">이벤트 관리</NavItem>
         <NavItem href="/goods">굿즈 관리</NavItem>
         

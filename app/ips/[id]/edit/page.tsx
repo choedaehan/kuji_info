@@ -1,8 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-export default function IpCreatePage() {
+export default function IpEditPage() {
+  const params = useParams();
+  const router = useRouter();
+
+  const ipId = params.id as string;
+
   const [name, setName] = useState('');
   const [englishName, setEnglishName] = useState('');
   const [originalName, setOriginalName] = useState('');
@@ -11,6 +17,33 @@ export default function IpCreatePage() {
   const [status, setStatus] = useState('ACTIVE');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const getIp = async () => {
+      try {
+        const response = await fetch(`/api/ips/${ipId}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          setMessage(data.message || 'IP 정보를 불러오지 못했습니다.');
+          return;
+        }
+
+        setName(data.name ?? '');
+        setEnglishName(data.englishName ?? '');
+        setOriginalName(data.originalName ?? '');
+        setOfficialUrl(data.officialUrl ?? '');
+        setDescription(data.description ?? '');
+        setStatus(data.status ?? 'ACTIVE');
+      } catch {
+        setMessage('IP 조회 중 오류가 발생했습니다.');
+      }
+    };
+
+    if (ipId) {
+      getIp();
+    }
+  }, [ipId]);
 
   const handleSubmit = async () => {
     if (!name) {
@@ -22,9 +55,11 @@ export default function IpCreatePage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/ips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(`/api/ips/${ipId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           name,
           englishName,
@@ -38,17 +73,12 @@ export default function IpCreatePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.message || 'IP 등록에 실패했습니다.');
+        setMessage(data.message || 'IP 수정에 실패했습니다.');
         return;
       }
 
-      setMessage('IP가 등록되었습니다.');
-      setName('');
-      setEnglishName('');
-      setOriginalName('');
-      setOfficialUrl('');
-      setDescription('');
-      setStatus('ACTIVE');
+      alert('IP가 수정되었습니다.');
+      router.push(`/ips/${ipId}`);
     } catch {
       setMessage('서버 오류가 발생했습니다.');
     } finally {
@@ -59,7 +89,7 @@ export default function IpCreatePage() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h1 style={styles.title}>IP 등록</h1>
+        <h1 style={styles.title}>IP 수정</h1>
 
         <div style={styles.field}>
           <label style={styles.label}>IP 이름</label>
@@ -131,7 +161,7 @@ export default function IpCreatePage() {
           onClick={handleSubmit}
           disabled={loading}
         >
-          {loading ? '등록 중...' : '등록'}
+          {loading ? '수정 중...' : '수정'}
         </button>
 
         {message && <p style={styles.message}>{message}</p>}
@@ -143,18 +173,18 @@ export default function IpCreatePage() {
 const styles: { [key: string]: React.CSSProperties } = {
   page: {
     minHeight: '100vh',
-    backgroundColor: '#f5f6f8',
+    backgroundColor: '#ffffff',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
-    padding: '24px 0',
+    padding: '48px 24px',
   },
   card: {
     width: 420,
     padding: 24,
     backgroundColor: '#ffffff',
     borderRadius: 8,
-    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+    border: '1px solid #e5e7eb',
   },
   title: {
     marginBottom: 24,

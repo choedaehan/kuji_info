@@ -1,5 +1,5 @@
 'use client';
-
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 type IpItem = {
@@ -11,6 +11,8 @@ type IpItem = {
 };
 
 export default function IpListPage() {
+  const router = useRouter();
+
   const [ipList, setIpList] = useState<IpItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -20,7 +22,7 @@ export default function IpListPage() {
       setLoading(true);
       setMessage('');
 
-      const response = await fetch('/api/ip', {
+      const response = await fetch('/api/ips', {
         method: 'GET',
       });
 
@@ -62,7 +64,9 @@ export default function IpListPage() {
         ) : (
           <div style={styles.list}>
             {ipList.map((ip) => (
-              <div key={ip.id} style={styles.item}>
+              <div key={ip.id} style={styles.item}
+                onClick={() => router.push(`/ips/${ip.id}`)}
+              >
                 <div>
                   <p style={styles.name}>{ip.name}</p>
                   <p style={styles.slug}>/{ip.slug}</p>

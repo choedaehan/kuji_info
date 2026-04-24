@@ -38,6 +38,7 @@ model Goods {
   ipEventId         Int?
   name              String
   goodsType         String?
+  saleType          SaleType  @default(SINGLE)
   officialPrice     Int?
   isNotForSale      Boolean   @default(false)
   releaseDate       DateTime?
@@ -49,11 +50,38 @@ model Goods {
 
   ip                Ip        @relation(fields: [ipId], references: [id])
   ipEvent           IpEvent?  @relation(fields: [ipEventId], references: [id])
+  goodsItems        GoodsItem[]
 
   @@index([ipId])
   @@index([ipEventId])
   @@index([name])
   @@map("goods")
+}
+
+model GoodsItem {
+  id                Int       @id @default(autoincrement())
+  goodsId           Int
+  name              String
+  characterName     String?
+  imageUrl          String?
+  rarity            String?
+  dropRate          Float?
+  sortOrder         Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  goods             Goods     @relation(fields: [goodsId], references: [id], onDelete: Cascade)
+
+  @@index([goodsId])
+  @@index([name])
+  @@index([characterName])
+  @@map("goods_items")
+}
+
+enum SaleType {
+  SINGLE
+  SELECTABLE
+  RANDOM
 }
 
 model IpEvent {

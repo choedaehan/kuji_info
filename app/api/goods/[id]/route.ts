@@ -1,70 +1,49 @@
 import { prisma } from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-type RouteContext = {
-  params: Promise<{
-    id: string;
-  }>;
-};
-
+// 굿즈 상세 조회
 export async function GET(
-  request: Request,
-  context: RouteContext,
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await context.params;
-    const goodsId = Number(id);
+  const { id } = await params;
+  const goodsId = Number(id);
 
-    if(Number.isNaN(goodsId)) {
-      return NextResponse.json(
-        { message: '유효하지 않은 굿즈 ID입니다.' },
-        { status: 400 },
-      );
-    }
-
-    const goods = await prisma.goods.findUnique({
-      where: {
-        id: goodsId,
-      },
-      include: {
-        ip: true,
-        ipEvent: true,
-      },
-    });
-
-    if(!goods) {
-      return NextResponse.json(
-        { message: '굿즈를 찾을 수 없습니다.' },
-        { status: 404 },
-      );
-    }
-
-    return NextResponse.json(goods);
-  } catch(error) {
-    console.error(error);
-
-    return NextResponse.json(
-      { message: '굿즈 상세 조회에 실패했습니다.' },
-      { status: 500 },
-    );
+  if (isNaN(goodsId)) {
+    return NextResponse.json({ message: '잘못된 ID입니다.' }, { status: 400 });
   }
+
+  const goods = await prisma.goods.findUnique({
+    where: { id: goodsId },
+    include: {
+      goodsItems: {
+        orderBy: { sortOrder: 'asc' },
+      },
+      ip: true,
+      ipEvent: true,
+    },
+  });
+
+  if (!goods) {
+    return NextResponse.json({ message: '굿즈를 찾을 수 없습니다.' }, { status: 404 });
+  }
+
+  return NextResponse.json(goods);
 }
 
+// 굿즈 수정 (Goods + GoodsItem)
 export async function PATCH(
-  request: Request,
-  context: RouteContext,
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  const goodsId = Number(id);
+
+  if (isNaN(goodsId)) {
+    return NextResponse.json({ message: '잘못된 ID입니다.' }, { status: 400 });
+  }
+
   try {
-    const { id } = await context.params;
-    const goodsId = Number(id);
-
-    if(Number.isNaN(goodsId)) {
-      return NextResponse.json(
-        { message: '유효하지 않은 굿즈 ID입니다.' },
-        { status: 400 },
-      );
-    }
-
     const body = await request.json();
 
     const {
@@ -72,97 +51,103 @@ export async function PATCH(
       ipEventId,
       name,
       goodsType,
+      saleType,
       officialPrice,
       isNotForSale,
       releaseDate,
       officialUrl,
       thumbnailImageUrl,
       description,
+      items,
     } = body;
 
-    if(!ipId || !name) {
+    if (!ipId || !name) {
       return NextResponse.json(
         { message: 'IP와 굿즈 이름은 필수입니다.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    const existingGoods = await prisma.goods.findUnique({
-      where: {
-        id: goodsId,
-      },
-    });
-
-    if(!existingGoods) {
+    if (!items || items.length === 0) {
       return NextResponse.json(
-        { message: '굿즈를 찾을 수 없습니다.' },
-        { status: 404 },
+        { message: '굿즈 아이템이 최소 1개 필요합니다.' },
+        { status: 400 }
       );
     }
 
-    const updatedGoods = await prisma.goods.update({
-      where: {
-        id: goodsId,
-      },
-      data: {
-        ipId: Number(ipId),
-        ipEventId: ipEventId ? Number(ipEventId) : null,
-        name,
-        goodsType: goodsType || null,
-        officialPrice: isNotForSale ? null : officialPrice ? Number(officialPrice) : null,
-        isNotForSale: Boolean(isNotForSale),
-        releaseDate: releaseDate ? new Date(releaseDate) : null,
-        officialUrl: officialUrl || null,
-        thumbnailImageUrl: thumbnailImageUrl || null,
-        description: description || null,
-      },
-      include: {
-        ip: true,
-        ipEvent: true,
-      },
+    await prisma.$transaction(async (tx) => {
+      // 1. Goods 업데이트
+      await tx.goods.update({
+        where: { id: goodsId },
+        data: {
+          ipId: Number(ipId),
+          ipEventId: ipEventId ? Number(ipEventId) : null,
+          name,
+          goodsType: goodsType || null,
+          saleType: saleType || 'SINGLE',
+          officialPrice: officialPrice ?? null,
+          isNotForSale: Boolean(isNotForSale),
+          releaseDate: releaseDate ? new Date(releaseDate) : null,
+          officialUrl: officialUrl || null,
+          thumbnailImageUrl: thumbnailImageUrl || null,
+          description: description || null,
+        },
+      });
+
+      // 2. 기존 GoodsItem 삭제
+      await tx.goodsItem.deleteMany({
+        where: { goodsId },
+      });
+
+      // 3. 새 GoodsItem 생성
+      await tx.goodsItem.createMany({
+        data: items.map((item: any, index: number) => ({
+          goodsId,
+          name: item.name,
+          characterName: item.characterName || null,
+          imageUrl: item.imageUrl || null,
+          rarity: item.rarity || null,
+          dropRate: item.dropRate ?? null,
+          sortOrder: item.sortOrder ?? index,
+        })),
+      });
     });
 
-    return NextResponse.json(updatedGoods);
-  } catch(error) {
+    return NextResponse.json({ message: '수정 완료' });
+  } catch (error) {
     console.error(error);
 
     return NextResponse.json(
-      { message: '굿즈 수정에 실패했습니다.' },
-      { status: 500 },
+      { message: '굿즈 수정 실패' },
+      { status: 500 }
     );
   }
 }
 
+// 굿즈 삭제
 export async function DELETE(
-    request: Request,
-    context: { params: Promise<{ id: string }> },
-  ) {
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const goodsId = Number(id);
+
+  if (isNaN(goodsId)) {
+    return NextResponse.json({ message: '잘못된 ID입니다.' }, { status: 400 });
+  }
+
   try {
-    const resolvedParams = await context.params;
-    const id = Number(resolvedParams.id);
-
-    if(!id) {
-      return Response.json(
-        { message: '유효하지 않은 굿즈 ID입니다.' },
-        { status: 400 },
-      );
-    }
-
     await prisma.goods.delete({
-      where: {
-        id,
-      },
+      where: { id: goodsId },
     });
 
-    return Response.json({
-      message: '굿즈가 삭제되었습니다.',
-    });
-  } catch(error) {
+    return NextResponse.json({ message: '삭제 완료' });
+  } catch (error) {
     console.error(error);
 
-    return Response.json(
-      { message: '굿즈 삭제에 실패했습니다.' },
-      { status: 500 },
+    return NextResponse.json(
+      { message: '삭제 실패' },
+      { status: 500 }
     );
   }
 }

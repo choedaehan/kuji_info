@@ -13,6 +13,14 @@ type IpEventItem = {
   name: string;
 };
 
+type GoodsItemInput = {
+  name: string;
+  characterName: string;
+  imageUrl: string;
+  rarity: string;
+  dropRate: string;
+};
+
 export default function GoodsCreatePage() {
   const [ipList, setIpList] = useState<IpItem[]>([]);
   const [ipEventList, setIpEventList] = useState<IpEventItem[]>([]);
@@ -21,12 +29,23 @@ export default function GoodsCreatePage() {
   const [ipEventId, setIpEventId] = useState('');
   const [name, setName] = useState('');
   const [goodsType, setGoodsType] = useState('');
+  const [saleType, setSaleType] = useState('SINGLE');
   const [officialPrice, setOfficialPrice] = useState('');
   const [isNotForSale, setIsNotForSale] = useState(false);
   const [releaseDate, setReleaseDate] = useState('');
   const [officialUrl, setOfficialUrl] = useState('');
   const [thumbnailImageUrl, setThumbnailImageUrl] = useState('');
   const [description, setDescription] = useState('');
+
+  const [items, setItems] = useState<GoodsItemInput[]>([
+    {
+      name: '',
+      characterName: '',
+      imageUrl: '',
+      rarity: '',
+      dropRate: '',
+    },
+  ]);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -56,9 +75,43 @@ export default function GoodsCreatePage() {
     }
   };
 
+  const handleAddItem = () => {
+    setItems([
+      ...items,
+      {
+        name: '',
+        characterName: '',
+        imageUrl: '',
+        rarity: '',
+        dropRate: '',
+      },
+    ]);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setItems(items.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const handleChangeItem = (
+    index: number,
+    field: keyof GoodsItemInput,
+    value: string
+  ) => {
+    setItems(
+      items.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]: value,
+            }
+          : item
+      )
+    );
+  };
+
   const getIpList = async () => {
     try {
-      const response = await fetch('/api/ip', {
+      const response = await fetch('/api/ips', {
         method: 'GET',
       });
 
@@ -116,6 +169,13 @@ export default function GoodsCreatePage() {
       return;
     }
 
+    const filteredItems = items.filter((item) => item.name.trim());
+
+    if(filteredItems.length === 0) {
+      setMessage('굿즈 아이템을 최소 1개 입력해주세요.');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
 
@@ -130,12 +190,21 @@ export default function GoodsCreatePage() {
           ipEventId,
           name,
           goodsType,
+          saleType,
           officialPrice: isNotForSale ? null : officialPrice === '' ? null : Number(officialPrice),
           isNotForSale,
           releaseDate,
           officialUrl,
           thumbnailImageUrl,
           description,
+          items: filteredItems.map((item, index) => ({
+            name: item.name,
+            characterName: item.characterName || null,
+            imageUrl: item.imageUrl || null,
+            rarity: item.rarity || null,
+            dropRate: item.dropRate ? Number(item.dropRate) : null,
+            sortOrder: index,
+          })),
         }),
       });
 
@@ -151,12 +220,22 @@ export default function GoodsCreatePage() {
       setIpEventId('');
       setName('');
       setGoodsType('');
+      setSaleType('SINGLE');
       setOfficialPrice('');
       setIsNotForSale(false);
       setReleaseDate('');
       setOfficialUrl('');
       setThumbnailImageUrl('');
       setDescription('');
+      setItems([
+        {
+          name: '',
+          characterName: '',
+          imageUrl: '',
+          rarity: '',
+          dropRate: '',
+        },
+      ]);
     } catch {
       setMessage('서버 오류가 발생했습니다.');
     } finally {
@@ -171,11 +250,7 @@ export default function GoodsCreatePage() {
 
         <div style={styles.field}>
           <label style={styles.label}>IP</label>
-          <select
-            style={styles.input}
-            value={ipId}
-            onChange={handleChangeIp}
-          >
+          <select style={styles.input} value={ipId} onChange={handleChangeIp}>
             <option value="">IP를 선택해주세요.</option>
             {ipList.map((ip) => (
               <option key={ip.id} value={ip.id}>
@@ -219,6 +294,19 @@ export default function GoodsCreatePage() {
             onChange={(event) => setGoodsType(event.target.value)}
             placeholder="예: 피규어, 아크릴, 포토카드"
           />
+        </div>
+
+        <div style={styles.field}>
+          <label style={styles.label}>판매 방식</label>
+          <select
+            style={styles.input}
+            value={saleType}
+            onChange={(event) => setSaleType(event.target.value)}
+          >
+            <option value="SINGLE">단일</option>
+            <option value="SELECTABLE">선택 구매</option>
+            <option value="RANDOM">랜덤</option>
+          </select>
         </div>
 
         <div style={styles.checkboxField}>
@@ -288,6 +376,90 @@ export default function GoodsCreatePage() {
           />
         </div>
 
+        <div style={styles.itemSection}>
+          <div style={styles.itemHeader}>
+            <h2 style={styles.subTitle}>굿즈 아이템</h2>
+
+            <button type="button" style={styles.smallButton} onClick={handleAddItem}>
+              아이템 추가
+            </button>
+          </div>
+
+          {items.map((item, index) => (
+            <div key={index} style={styles.itemBox}>
+              <div style={styles.field}>
+                <label style={styles.label}>아이템 이름</label>
+                <input
+                  style={styles.input}
+                  value={item.name}
+                  onChange={(event) =>
+                    handleChangeItem(index, 'name', event.target.value)
+                  }
+                  placeholder="예: A 디오라마"
+                />
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>캐릭터명</label>
+                <input
+                  style={styles.input}
+                  value={item.characterName}
+                  onChange={(event) =>
+                    handleChangeItem(index, 'characterName', event.target.value)
+                  }
+                  placeholder="예: 루피"
+                />
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>이미지 URL</label>
+                <input
+                  style={styles.input}
+                  value={item.imageUrl}
+                  onChange={(event) =>
+                    handleChangeItem(index, 'imageUrl', event.target.value)
+                  }
+                  placeholder="https://..."
+                />
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>레어도</label>
+                <input
+                  style={styles.input}
+                  value={item.rarity}
+                  onChange={(event) =>
+                    handleChangeItem(index, 'rarity', event.target.value)
+                  }
+                  placeholder="예: A, B, SSR"
+                />
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>확률</label>
+                <input
+                  style={styles.input}
+                  value={item.dropRate}
+                  onChange={(event) =>
+                    handleChangeItem(index, 'dropRate', event.target.value)
+                  }
+                  placeholder="예: 10"
+                />
+              </div>
+
+              {items.length > 1 && (
+                <button
+                  type="button"
+                  style={styles.removeButton}
+                  onClick={() => handleRemoveItem(index)}
+                >
+                  아이템 삭제
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
         <button
           style={{
             ...styles.button,
@@ -308,18 +480,18 @@ export default function GoodsCreatePage() {
 const styles: { [key: string]: React.CSSProperties } = {
   page: {
     minHeight: '100vh',
-    backgroundColor: '#f5f6f8',
+    backgroundColor: '#ffffff',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     padding: '24px 0',
   },
   card: {
-    width: 480,
+    width: 520,
     padding: 24,
     backgroundColor: '#ffffff',
     borderRadius: 8,
-    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+    border: '1px solid #e5e7eb',
   },
   title: {
     marginBottom: 24,
@@ -372,6 +544,46 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 14,
     resize: 'vertical',
     boxSizing: 'border-box',
+  },
+  itemSection: {
+    marginTop: 24,
+    paddingTop: 20,
+    borderTop: '1px solid #e5e7eb',
+  },
+  itemHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  subTitle: {
+    fontSize: 16,
+    fontWeight: 700,
+    margin: 0,
+  },
+  smallButton: {
+    height: 34,
+    padding: '0 12px',
+    borderRadius: 6,
+    border: '1px solid #dcdfe3',
+    backgroundColor: '#ffffff',
+    cursor: 'pointer',
+  },
+  itemBox: {
+    padding: 16,
+    marginBottom: 16,
+    border: '1px solid #e5e7eb',
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+  },
+  removeButton: {
+    width: '100%',
+    height: 36,
+    borderRadius: 6,
+    border: 'none',
+    backgroundColor: '#dc2626',
+    color: '#ffffff',
+    cursor: 'pointer',
   },
   button: {
     width: '100%',

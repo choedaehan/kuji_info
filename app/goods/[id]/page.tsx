@@ -10,12 +10,26 @@ type GoodsDetailPageProps = {
   }>;
 };
 
+type GoodsItem = {
+  id: number;
+  name: string;
+  characterName: string | null;
+  imageUrl: string | null;
+  rarity: string | null;
+  dropRate: number | null;
+  sortOrder: number;
+};
+
 type GoodsDetail = {
   id: number;
   name: string;
+  goodsType: string | null;
+  saleType: string;
   officialPrice: number | null;
+  isNotForSale: boolean;
   releaseDate?: string | null;
   officialUrl?: string | null;
+  thumbnailImageUrl?: string | null;
   description?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -27,11 +41,10 @@ type GoodsDetail = {
     id: number;
     name: string;
   } | null;
+  goodsItems: GoodsItem[];
 };
 
-export default function GoodsDetailPage({
-  params,
-}: GoodsDetailPageProps) {
+export default function GoodsDetailPage({ params }: GoodsDetailPageProps) {
   const router = useRouter();
 
   const [goodsId, setGoodsId] = useState<number | null>(null);
@@ -129,7 +142,9 @@ export default function GoodsDetailPage({
     return (
       <div style={styles.page}>
         <div style={styles.container}>
-          <div style={styles.message}>{message || '굿즈 정보를 찾을 수 없습니다.'}</div>
+          <div style={styles.message}>
+            {message || '굿즈 정보를 찾을 수 없습니다.'}
+          </div>
 
           <div style={styles.headerButtonGroup}>
             <Link href="/goods" style={styles.linkButton}>
@@ -155,10 +170,7 @@ export default function GoodsDetailPage({
               목록
             </Link>
 
-            <Link
-              href={`/goods/${goods.id}/edit`}
-              style={styles.editButton}
-            >
+            <Link href={`/goods/${goods.id}/edit`} style={styles.editButton}>
               수정
             </Link>
 
@@ -183,12 +195,16 @@ export default function GoodsDetailPage({
           <DetailRow label="상품명" value={goods.name} />
           <DetailRow label="IP" value={goods.ip?.name ?? '-'} />
           <DetailRow label="이벤트" value={goods.ipEvent?.name ?? '-'} />
+          <DetailRow label="굿즈 종류" value={goods.goodsType || '-'} />
+          <DetailRow label="판매 방식" value={getSaleTypeLabel(goods.saleType)} />
           <DetailRow
             label="가격"
             value={
-              typeof goods.officialPrice === 'number'
-                ? `${goods.officialPrice.toLocaleString()}원`
-                : '-'
+              goods.isNotForSale
+                ? '비매품'
+                : typeof goods.officialPrice === 'number'
+                  ? `${goods.officialPrice.toLocaleString()}원`
+                  : '-'
             }
           />
           <DetailRow
@@ -205,7 +221,7 @@ export default function GoodsDetailPage({
                   rel="noreferrer"
                   style={styles.urlLink}
                 >
-                  {goods.officialUrl}
+                  공식 링크 이동
                 </a>
               ) : (
                 '-'
@@ -213,12 +229,76 @@ export default function GoodsDetailPage({
             }
           />
           <DetailRow
-            label="설명"
-            value={goods.description || '-'}
-            multiline
+            label="썸네일"
+            value={
+              goods.thumbnailImageUrl ? (
+                <a
+                  href={goods.thumbnailImageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={styles.urlLink}
+                >
+                  이미지 링크 이동
+                </a>
+              ) : (
+                '-'
+              )
+            }
           />
+          <DetailRow label="설명" value={goods.description || '-'} multiline />
           <DetailRow label="등록일" value={formatDateTime(goods.createdAt)} />
           <DetailRow label="수정일" value={formatDateTime(goods.updatedAt)} />
+        </div>
+
+        <div style={styles.itemSection}>
+          <h2 style={styles.sectionTitle}>굿즈 아이템</h2>
+
+          {goods.goodsItems.length === 0 ? (
+            <div style={styles.emptyBox}>등록된 굿즈 아이템이 없습니다.</div>
+          ) : (
+            <div style={styles.itemList}>
+              {goods.goodsItems.map((item) => (
+                <div key={item.id} style={styles.itemCard}>
+                  <div style={styles.itemName}>{item.name}</div>
+
+                  <div style={styles.itemInfo}>
+                    <span style={styles.itemLabel}>캐릭터</span>
+                    <span>{item.characterName || '-'}</span>
+                  </div>
+
+                  <div style={styles.itemInfo}>
+                    <span style={styles.itemLabel}>레어도</span>
+                    <span>{item.rarity || '-'}</span>
+                  </div>
+
+                  <div style={styles.itemInfo}>
+                    <span style={styles.itemLabel}>확률</span>
+                    <span>
+                      {typeof item.dropRate === 'number'
+                        ? `${item.dropRate}%`
+                        : '-'}
+                    </span>
+                  </div>
+
+                  <div style={styles.itemInfo}>
+                    <span style={styles.itemLabel}>이미지</span>
+                    {item.imageUrl ? (
+                      <a
+                        href={item.imageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={styles.urlLink}
+                      >
+                        이미지 링크 이동
+                      </a>
+                    ) : (
+                      <span>-</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -249,6 +329,14 @@ function DetailRow({
   );
 }
 
+function getSaleTypeLabel(value: string) {
+  if(value === 'SINGLE') return '단일';
+  if(value === 'SELECTABLE') return '선택 구매';
+  if(value === 'RANDOM') return '랜덤';
+
+  return value;
+}
+
 function formatDate(value: string) {
   const date = new Date(value);
   const year = date.getFullYear();
@@ -272,7 +360,7 @@ function formatDateTime(value: string) {
 const styles: { [key: string]: React.CSSProperties } = {
   page: {
     minHeight: '100vh',
-    backgroundColor: '#f5f6f8',
+    backgroundColor: '#ffffff',
     padding: '24px',
   },
   container: {
@@ -358,7 +446,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   detailLabel: {
     padding: '16px',
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#ffffff',
     fontWeight: 700,
     color: '#374151',
   },
@@ -371,5 +459,47 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#2563eb',
     textDecoration: 'underline',
     wordBreak: 'break-all',
+  },
+  itemSection: {
+    marginTop: '32px',
+  },
+  sectionTitle: {
+    fontSize: '18px',
+    fontWeight: 700,
+    margin: '0 0 16px',
+  },
+  emptyBox: {
+    padding: '24px',
+    border: '1px solid #e5e7eb',
+    borderRadius: '12px',
+    backgroundColor: '#ffffff',
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  itemList: {
+    display: 'grid',
+    gap: '12px',
+  },
+  itemCard: {
+    padding: '16px',
+    border: '1px solid #e5e7eb',
+    borderRadius: '12px',
+    backgroundColor: '#ffffff',
+  },
+  itemName: {
+    fontSize: '16px',
+    fontWeight: 700,
+    marginBottom: '12px',
+  },
+  itemInfo: {
+    display: 'grid',
+    gridTemplateColumns: '80px 1fr',
+    gap: '8px',
+    fontSize: '14px',
+    marginTop: '8px',
+  },
+  itemLabel: {
+    color: '#6b7280',
+    fontWeight: 600,
   },
 };

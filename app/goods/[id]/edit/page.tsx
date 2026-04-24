@@ -76,7 +76,7 @@ export default function GoodsEditPage({
   };
 
   const getIpList = async () => {
-    const response = await fetch('/api/ip', {
+    const response = await fetch('/api/ips', {
       method: 'GET',
     });
 
@@ -90,7 +90,7 @@ export default function GoodsEditPage({
   };
 
   const getIpEventList = async () => {
-    const response = await fetch('/api/ip-event', {
+    const response = await fetch('/api/ip-events', {
       method: 'GET',
     });
 

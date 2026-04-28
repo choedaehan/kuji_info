@@ -21,7 +21,7 @@ export default function IpEventCreatePage() {
 
   const getIpList = async () => {
     try {
-      const response = await fetch('/api/ip', {
+      const response = await fetch('/api/ips', {
         method: 'GET',
       });
 

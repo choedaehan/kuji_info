@@ -172,7 +172,13 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
     }
 
     setIpId(data.ipId ? String(data.ipId) : '');
-    setIpEventId(data.ipEventId ? String(data.ipEventId) : '');
+
+    setIpEventId(
+      data.eventGoods?.[0]?.event?.id
+        ? String(data.eventGoods[0].event.id)
+        : ''
+    );
+
     setName(data.name || '');
     setGoodsType(data.goodsType || '');
     setSaleType(data.saleType || 'SINGLE');
@@ -264,7 +270,7 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
         },
         body: JSON.stringify({
           ipId: Number(ipId),
-          ipEventId: ipEventId === '' ? null : Number(ipEventId),
+          eventId: ipEventId === '' ? null : Number(ipEventId),
           name,
           goodsType,
           saleType,

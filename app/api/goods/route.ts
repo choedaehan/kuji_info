@@ -1,12 +1,16 @@
 import { prisma } from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET() {
   try {
     const goodsList = await prisma.goods.findMany({
       include: {
         ip: true,
-        ipEvent: true,
+        eventGoods: {
+          include: {
+            event: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -24,8 +28,6 @@ export async function GET() {
   }
 }
 
-import { NextRequest } from 'next/server';
-
 // 굿즈 등록 (Goods + GoodsItem)
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     const {
       ipId,
-      ipEventId,
+      eventId,
       name,
       goodsType,
       saleType,
@@ -61,11 +63,9 @@ export async function POST(request: NextRequest) {
     }
 
     const goods = await prisma.$transaction(async (tx) => {
-      // 1. Goods 생성
       const createdGoods = await tx.goods.create({
         data: {
           ipId: Number(ipId),
-          ipEventId: ipEventId ? Number(ipEventId) : null,
           name,
           goodsType: goodsType || null,
           saleType: saleType || 'SINGLE',
@@ -78,7 +78,15 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 2. GoodsItem 생성
+      if (eventId) {
+        await tx.eventGoods.create({
+          data: {
+            eventId: Number(eventId),
+            goodsId: createdGoods.id,
+          },
+        });
+      }
+
       await tx.goodsItem.createMany({
         data: items.map((item: any, index: number) => ({
           goodsId: createdGoods.id,

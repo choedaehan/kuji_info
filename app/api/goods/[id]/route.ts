@@ -20,7 +20,11 @@ export async function GET(
         orderBy: { sortOrder: 'asc' },
       },
       ip: true,
-      ipEvent: true,
+      eventGoods: {
+        include: {
+          event: true,
+        },
+      },
     },
   });
 
@@ -81,7 +85,6 @@ export async function PATCH(
         where: { id: goodsId },
         data: {
           ipId: Number(ipId),
-          ipEventId: ipEventId ? Number(ipEventId) : null,
           name,
           goodsType: goodsType || null,
           saleType: saleType || 'SINGLE',
@@ -94,12 +97,27 @@ export async function PATCH(
         },
       });
 
-      // 2. 기존 GoodsItem 삭제
+      // 2. 기존 이벤트 연결 삭제
+      await tx.eventGoods.deleteMany({
+        where: { goodsId },
+      });
+
+      // 3. 새 이벤트 연결 생성
+      if (ipEventId) {
+        await tx.eventGoods.create({
+          data: {
+            goodsId,
+            eventId: Number(ipEventId),
+          },
+        });
+      }
+
+      // 4. 기존 GoodsItem 삭제
       await tx.goodsItem.deleteMany({
         where: { goodsId },
       });
 
-      // 3. 새 GoodsItem 생성
+      // 5. 새 GoodsItem 생성
       await tx.goodsItem.createMany({
         data: items.map((item: any, index: number) => ({
           goodsId,
@@ -137,8 +155,18 @@ export async function DELETE(
   }
 
   try {
-    await prisma.goods.delete({
-      where: { id: goodsId },
+    await prisma.$transaction(async (tx) => {
+      await tx.eventGoods.deleteMany({
+        where: { goodsId },
+      });
+
+      await tx.goodsItem.deleteMany({
+        where: { goodsId },
+      });
+
+      await tx.goods.delete({
+        where: { id: goodsId },
+      });
     });
 
     return NextResponse.json({ message: '삭제 완료' });

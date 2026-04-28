@@ -1,16 +1,10 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
 }
 
 datasource db {
-  provider = "mysql" // MariaDB 사용 시에도 mysql provider 사용
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -35,7 +29,6 @@ model Ip {
 model Goods {
   id                Int       @id @default(autoincrement())
   ipId              Int
-  ipEventId         Int?
   name              String
   goodsType         String?
   saleType          SaleType  @default(SINGLE)
@@ -49,11 +42,10 @@ model Goods {
   updatedAt         DateTime  @updatedAt
 
   ip                Ip        @relation(fields: [ipId], references: [id])
-  ipEvent           IpEvent?  @relation(fields: [ipEventId], references: [id])
   goodsItems        GoodsItem[]
+  eventGoods        EventGoods[]
 
   @@index([ipId])
-  @@index([ipEventId])
   @@index([name])
   @@map("goods")
 }
@@ -97,11 +89,24 @@ model IpEvent {
   updatedAt   DateTime  @updatedAt
 
   ip          Ip        @relation(fields: [ipId], references: [id])
-  goods       Goods[]
+  eventGoods  EventGoods[]
 
   @@index([ipId])
   @@index([name])
   @@map("ip_events")
+}
+
+model EventGoods {
+  eventId   Int
+  goodsId   Int
+  createdAt DateTime @default(now())
+
+  event     IpEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  goods     Goods    @relation(fields: [goodsId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, goodsId])
+  @@index([goodsId])
+  @@map("event_goods")
 }
 
 enum IpStatus {

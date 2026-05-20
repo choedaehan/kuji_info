@@ -1,4 +1,5 @@
 'use client';
+
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -7,7 +8,7 @@ type GoodsItem = {
   name: string;
   goodsType: string | null;
   officialPrice: number | null;
-  isNotForSale: Boolean;
+  isNotForSale: boolean;
   releaseDate: string | null;
   officialUrl: string | null;
   thumbnailImageUrl: string | null;
@@ -18,10 +19,12 @@ type GoodsItem = {
     id: number;
     name: string;
   };
-  ipEvent: {
-    id: number;
-    name: string;
-  } | null;
+  eventGoods: {
+    event: {
+      id: number;
+      name: string;
+    };
+  }[];
 };
 
 export default function GoodsListPage() {
@@ -76,72 +79,76 @@ export default function GoodsListPage() {
           <p style={styles.message}>등록된 굿즈가 없습니다.</p>
         ) : (
           <div style={styles.list}>
-            {goodsList.map((goods) => (
-              <div
-                key={goods.id}
-                style={styles.item}
-                onClick={() => router.push(`/goods/${goods.id}`)}
-              >
-                <div style={styles.leftSection}>
-                  {goods.thumbnailImageUrl ? (
-                    <img
-                      src={goods.thumbnailImageUrl}
-                      alt={goods.name}
-                      style={styles.thumbnail}
-                    />
-                  ) : (
-                    <div style={styles.emptyThumbnail}>이미지 없음</div>
-                  )}
+            {goodsList.map((goods) => {
+              const event = goods.eventGoods?.[0]?.event;
 
-                  <div style={styles.content}>
-                    <div style={styles.topRow}>
-                      <p style={styles.name}>{goods.name}</p>
-                      {goods.goodsType ? (
-                        <span style={styles.badge}>{goods.goodsType}</span>
+              return (
+                <div
+                  key={goods.id}
+                  style={styles.item}
+                  onClick={() => router.push(`/goods/${goods.id}`)}
+                >
+                  <div style={styles.leftSection}>
+                    {goods.thumbnailImageUrl ? (
+                      <img
+                        src={goods.thumbnailImageUrl}
+                        alt={goods.name}
+                        style={styles.thumbnail}
+                      />
+                    ) : (
+                      <div style={styles.emptyThumbnail}>이미지 없음</div>
+                    )}
+
+                    <div style={styles.content}>
+                      <div style={styles.topRow}>
+                        <p style={styles.name}>{goods.name}</p>
+                        {goods.goodsType ? (
+                          <span style={styles.badge}>{goods.goodsType}</span>
+                        ) : null}
+                      </div>
+
+                      <p style={styles.meta}>IP: {goods.ip.name}</p>
+
+                      <p style={styles.meta}>
+                        이벤트: {event ? event.name : '-'}
+                      </p>
+
+                      <p style={styles.meta}>
+                        공식 가격:{' '}
+                        {goods.isNotForSale
+                          ? '비매품'
+                          : goods.officialPrice !== null
+                            ? `${goods.officialPrice.toLocaleString('ko-KR')}원`
+                            : '-'}
+                      </p>
+
+                      <p style={styles.meta}>
+                        출시일:{' '}
+                        {goods.releaseDate
+                          ? new Date(goods.releaseDate).toLocaleDateString('ko-KR')
+                          : '-'}
+                      </p>
+
+                      {goods.description ? (
+                        <p style={styles.description}>{goods.description}</p>
+                      ) : null}
+
+                      {goods.officialUrl ? (
+                        <a
+                          href={goods.officialUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={styles.link}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          공식 링크 이동
+                        </a>
                       ) : null}
                     </div>
-
-                    <p style={styles.meta}>
-                      IP: {goods.ip.name}
-                    </p>
-
-                    <p style={styles.meta}>
-                      이벤트: {goods.ipEvent ? goods.ipEvent.name : '-'}
-                    </p>
-
-                    <p style={styles.meta}>
-                      공식 가격: {goods.isNotForSale
-                        ? '비매품'
-                        : goods.officialPrice !== null
-                          ? `${goods.officialPrice.toLocaleString('ko-KR')}원`
-                          : '-'}
-                    </p>
-
-                    <p style={styles.meta}>
-                      출시일: {goods.releaseDate
-                        ? new Date(goods.releaseDate).toLocaleDateString('ko-KR')
-                        : '-'}
-                    </p>
-
-                    {goods.description ? (
-                      <p style={styles.description}>{goods.description}</p>
-                    ) : null}
-
-                    {goods.officialUrl ? (
-                      <a
-                        href={goods.officialUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={styles.link}
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        공식 링크 이동
-                      </a>
-                    ) : null}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

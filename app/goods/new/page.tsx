@@ -11,6 +11,7 @@ type IpEventItem = {
   id: number;
   ipId: number;
   name: string;
+  startDate?: string | null;
 };
 
 type GoodsItemInput = {
@@ -19,6 +20,14 @@ type GoodsItemInput = {
   imageUrl: string;
   rarity: string;
   dropRate: string;
+};
+
+const emptyItem = {
+  name: '',
+  characterName: '',
+  imageUrl: '',
+  rarity: '',
+  dropRate: '',
 };
 
 export default function GoodsCreatePage() {
@@ -37,15 +46,7 @@ export default function GoodsCreatePage() {
   const [thumbnailImageUrl, setThumbnailImageUrl] = useState('');
   const [description, setDescription] = useState('');
 
-  const [items, setItems] = useState<GoodsItemInput[]>([
-    {
-      name: '',
-      characterName: '',
-      imageUrl: '',
-      rarity: '',
-      dropRate: '',
-    },
-  ]);
+  const [items, setItems] = useState<GoodsItemInput[]>([emptyItem]);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -60,6 +61,26 @@ export default function GoodsCreatePage() {
 
   const displayOfficialPrice =
     officialPrice === '' ? '' : Number(officialPrice).toLocaleString('ko-KR');
+
+  useEffect(() => {
+    if(saleType !== 'SINGLE') {
+      return;
+    }
+
+    setItems((prevItems) => {
+      const firstItem = prevItems[0] || emptyItem;
+
+      return [
+        {
+          ...firstItem,
+          name,
+          imageUrl: thumbnailImageUrl,
+          rarity: '',
+          dropRate: '',
+        },
+      ];
+    });
+  }, [saleType, name, thumbnailImageUrl]);
 
   const handleChangeOfficialPrice = (event: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value.replace(/,/g, '').replace(/[^0-9]/g, '');
@@ -78,13 +99,7 @@ export default function GoodsCreatePage() {
   const handleAddItem = () => {
     setItems([
       ...items,
-      {
-        name: '',
-        characterName: '',
-        imageUrl: '',
-        rarity: '',
-        dropRate: '',
-      },
+      emptyItem,
     ]);
   };
 
@@ -145,6 +160,7 @@ export default function GoodsCreatePage() {
         id: ipEvent.id,
         ipId: ipEvent.ipId,
         name: ipEvent.name,
+        startDate: ipEvent.startDate,
       }));
 
       setIpEventList(normalizedList);
@@ -163,15 +179,50 @@ export default function GoodsCreatePage() {
     setIpEventId('');
   };
 
+  const handleChangeIpEvent = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedEventId = event.target.value;
+
+    setIpEventId(selectedEventId);
+
+    const selectedEvent = ipEventList.find(
+      (ipEvent) => String(ipEvent.id) === selectedEventId
+    );
+
+    if(selectedEvent?.startDate) {
+      setReleaseDate(new Date(selectedEvent.startDate).toISOString().slice(0, 10));
+    }
+  };
+
   const handleSubmit = async () => {
     if(!ipId || !name) {
       setMessage('IP와 굿즈 이름을 입력해주세요.');
       return;
     }
 
-    const filteredItems = items.filter((item) => item.name.trim());
+    const submitItems =
+      saleType === 'SINGLE'
+        ? [
+            {
+              name,
+              characterName: items[0]?.characterName || null,
+              imageUrl: thumbnailImageUrl || null,
+              rarity: null,
+              dropRate: null,
+              sortOrder: 0,
+            },
+          ]
+        : items
+            .filter((item) => item.name.trim())
+            .map((item, index) => ({
+              name: item.name,
+              characterName: item.characterName || null,
+              imageUrl: item.imageUrl || null,
+              rarity: item.rarity || null,
+              dropRate: item.dropRate ? Number(item.dropRate) : null,
+              sortOrder: index,
+            }));
 
-    if(filteredItems.length === 0) {
+    if(submitItems.length === 0) {
       setMessage('굿즈 아이템을 최소 1개 입력해주세요.');
       return;
     }
@@ -186,25 +237,18 @@ export default function GoodsCreatePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ipId,
-          ipEventId,
+          ipId: Number(ipId),
+          eventId: ipEventId === '' ? null : Number(ipEventId),
           name,
           goodsType,
           saleType,
           officialPrice: isNotForSale ? null : officialPrice === '' ? null : Number(officialPrice),
           isNotForSale,
-          releaseDate,
+          releaseDate: releaseDate === '' ? null : releaseDate,
           officialUrl,
           thumbnailImageUrl,
           description,
-          items: filteredItems.map((item, index) => ({
-            name: item.name,
-            characterName: item.characterName || null,
-            imageUrl: item.imageUrl || null,
-            rarity: item.rarity || null,
-            dropRate: item.dropRate ? Number(item.dropRate) : null,
-            sortOrder: index,
-          })),
+          items: submitItems,
         }),
       });
 
@@ -227,15 +271,7 @@ export default function GoodsCreatePage() {
       setOfficialUrl('');
       setThumbnailImageUrl('');
       setDescription('');
-      setItems([
-        {
-          name: '',
-          characterName: '',
-          imageUrl: '',
-          rarity: '',
-          dropRate: '',
-        },
-      ]);
+      setItems([emptyItem]);
     } catch {
       setMessage('서버 오류가 발생했습니다.');
     } finally {
@@ -265,7 +301,7 @@ export default function GoodsCreatePage() {
           <select
             style={styles.input}
             value={ipEventId}
-            onChange={(event) => setIpEventId(event.target.value)}
+            onChange={handleChangeIpEvent}
           >
             <option value="">선택 안 함</option>
             {filteredIpEventList.map((ipEvent) => (
@@ -380,9 +416,11 @@ export default function GoodsCreatePage() {
           <div style={styles.itemHeader}>
             <h2 style={styles.subTitle}>굿즈 아이템</h2>
 
-            <button type="button" style={styles.smallButton} onClick={handleAddItem}>
-              아이템 추가
-            </button>
+            {saleType !== 'SINGLE' && (
+              <button type="button" style={styles.smallButton} onClick={handleAddItem}>
+                아이템 추가
+              </button>
+            )}
           </div>
 
           {items.map((item, index) => (
@@ -396,6 +434,7 @@ export default function GoodsCreatePage() {
                     handleChangeItem(index, 'name', event.target.value)
                   }
                   placeholder="예: A 디오라마"
+                  disabled={saleType === 'SINGLE'}
                 />
               </div>
 
@@ -420,6 +459,7 @@ export default function GoodsCreatePage() {
                     handleChangeItem(index, 'imageUrl', event.target.value)
                   }
                   placeholder="https://..."
+                  disabled={saleType === 'SINGLE'}
                 />
               </div>
 
@@ -432,6 +472,7 @@ export default function GoodsCreatePage() {
                     handleChangeItem(index, 'rarity', event.target.value)
                   }
                   placeholder="예: A, B, SSR"
+                  disabled={saleType === 'SINGLE'}
                 />
               </div>
 
@@ -444,10 +485,11 @@ export default function GoodsCreatePage() {
                     handleChangeItem(index, 'dropRate', event.target.value)
                   }
                   placeholder="예: 10"
+                  disabled={saleType === 'SINGLE'}
                 />
               </div>
 
-              {items.length > 1 && (
+              {saleType !== 'SINGLE' && items.length > 1 && (
                 <button
                   type="button"
                   style={styles.removeButton}

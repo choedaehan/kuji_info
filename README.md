@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Goods Archive
 
-## Getting Started
+애니메이션, 게임, 캐릭터 IP 기반의 굿즈 정보를 아카이빙하고 관리하기 위한 프로젝트입니다.
 
-First, run the development server:
+굿즈의 공식 가격, 판매 이벤트, 구성품 정보를 구조화하여 저장하고 조회할 수 있도록 개발했습니다.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 프로젝트 소개
+
+중고 거래 플랫폼에서 굿즈를 구매할 때  
+공식 가격이나 판매 정보를 확인하기 어려운 경우가 많았습니다.
+
+특히:
+- 원래 정가가 얼마였는지
+- 어떤 이벤트에서 판매된 굿즈인지
+- 랜덤 굿즈의 구성품이 무엇인지
+
+확인하기 어려워 현재 거래 가격이 합리적인지 판단하기 힘들다고 느꼈습니다.
+
+이 프로젝트는 굿즈의 공식 정보와 판매 정보를 구조적으로 정리하고 관리하기 위해 개발했습니다.
+
+---
+
+## 주요 기능
+
+### IP 관리
+- IP 등록 및 수정
+- 공식 링크 및 설명 관리
+
+### 이벤트 관리
+- 이벤트 등록 및 수정
+- 이벤트 정보 조회
+
+### 굿즈 관리
+- 굿즈 등록 / 수정 / 삭제
+- 공식 가격 관리
+- 비매품 여부 설정
+- 썸네일 이미지 관리
+
+### 굿즈 구성품 관리
+- 굿즈 구성품 등록
+- 캐릭터명 및 이미지 관리
+
+---
+
+## 기술 스택
+
+### Full Stack
+- Next.js (App Router)
+- React
+- TypeScript
+- Prisma
+- MariaDB
+
+---
+
+## 데이터 구조
+
+```text
+IP
+ └── Event
+       └── Goods
+              └── GoodsItem
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 고민했던 부분
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 굿즈와 이벤트 관계
 
-## Learn More
+하나의 굿즈가 여러 이벤트에서 판매될 수 있는 구조를 고려하며 데이터 모델링을 진행했습니다.
 
-To learn more about Next.js, take a look at the following resources:
+### 비매품 처리
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+특전 및 증정품처럼 공식 가격이 존재하지 않는 굿즈를 위해 별도 상태값을 추가했습니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 굿즈 구성품 구조 분리
 
-## Deploy on Vercel
+랜덤 굿즈와 같은 형태를 고려하여 굿즈와 구성품 데이터를 분리해 관리할 수 있도록 설계했습니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 실행 방법
+
+```bash
+npm install
+npm run dev
+```
+
+---
+
+## Environment Variables
+
+```env
+DATABASE_URL=
+```

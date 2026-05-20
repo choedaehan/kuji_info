@@ -9,16 +9,15 @@ datasource db {
 }
 
 model Ip {
-  id           Int        @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   name         String
   englishName  String?
   originalName String?
   officialUrl  String?
-  description  String?    @db.Text
-  status       IpStatus   @default(ACTIVE)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
+  description  String?   @db.Text
+  status       IpStatus  @default(ACTIVE)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   goods        Goods[]
   ipEvents     IpEvent[]
 
@@ -27,23 +26,23 @@ model Ip {
 }
 
 model Goods {
-  id                Int       @id @default(autoincrement())
+  id                Int          @id @default(autoincrement())
   ipId              Int
   name              String
-  goodsType         String?
-  saleType          SaleType  @default(SINGLE)
   officialPrice     Int?
-  isNotForSale      Boolean   @default(false)
   releaseDate       DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  description       String?      @db.Text
+  goodsType         String?
   officialUrl       String?
   thumbnailImageUrl String?
-  description       String?   @db.Text
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  ip                Ip        @relation(fields: [ipId], references: [id])
-  goodsItems        GoodsItem[]
+  isNotForSale      Boolean      @default(false)
+  saleType          SaleType     @default(SINGLE)
+  version           Int?
   eventGoods        EventGoods[]
+  ip                Ip           @relation(fields: [ipId], references: [id])
+  goodsItems        GoodsItem[]
 
   @@index([ipId])
   @@index([name])
@@ -51,18 +50,17 @@ model Goods {
 }
 
 model GoodsItem {
-  id                Int       @id @default(autoincrement())
-  goodsId           Int
-  name              String
-  characterName     String?
-  imageUrl          String?
-  rarity            String?
-  dropRate          Float?
-  sortOrder         Int       @default(0)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  goods             Goods     @relation(fields: [goodsId], references: [id], onDelete: Cascade)
+  id            Int      @id @default(autoincrement())
+  goodsId       Int
+  name          String
+  characterName String?
+  imageUrl      String?
+  rarity        String?
+  dropRate      Float?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+  goods         Goods    @relation(fields: [goodsId], references: [id], onDelete: Cascade)
 
   @@index([goodsId])
   @@index([name])
@@ -70,26 +68,19 @@ model GoodsItem {
   @@map("goods_items")
 }
 
-enum SaleType {
-  SINGLE
-  SELECTABLE
-  RANDOM
-}
-
 model IpEvent {
-  id          Int       @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   ipId        Int
   name        String
   startDate   DateTime?
   endDate     DateTime?
   location    String?
   officialUrl String?
-  description String?   @db.Text
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  ip          Ip        @relation(fields: [ipId], references: [id])
+  description String?      @db.Text
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   eventGoods  EventGoods[]
+  ip          Ip           @relation(fields: [ipId], references: [id])
 
   @@index([ipId])
   @@index([name])
@@ -100,13 +91,18 @@ model EventGoods {
   eventId   Int
   goodsId   Int
   createdAt DateTime @default(now())
-
   event     IpEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   goods     Goods    @relation(fields: [goodsId], references: [id], onDelete: Cascade)
 
   @@id([eventId, goodsId])
   @@index([goodsId])
   @@map("event_goods")
+}
+
+enum SaleType {
+  SINGLE
+  SELECTABLE
+  RANDOM
 }
 
 enum IpStatus {

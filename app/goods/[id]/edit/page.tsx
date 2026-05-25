@@ -1,5 +1,6 @@
 'use client';
 
+import { formatKujiLineupLabel } from '@/lib/kuji';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -13,6 +14,64 @@ type IpEventItem = {
   id: number;
   ipId: number;
   name: string;
+};
+
+type IpEventResponse = {
+  id: number;
+  ipId: number;
+  name: string;
+};
+
+type ManufacturerItem = {
+  id: number;
+  name: string;
+};
+
+type KujiItem = {
+  id: number;
+  ipId: number;
+  name: string;
+};
+
+type KujiResponse = {
+  id: number;
+  ipId: number;
+  name: string;
+};
+
+type KujiLineupItem = {
+  id: number;
+  prizeName: string | null;
+  prizeType: string | null;
+  grade: string | null;
+  quantity: number | null;
+  goodsId: number | null;
+  goods: {
+    id: number;
+    name: string;
+  } | null;
+};
+
+type KujiDetailResponse = {
+  lineups: KujiLineupItem[];
+};
+
+type GoodsItemResponse = {
+  name?: string | null;
+  characterName?: string | null;
+  imageUrl?: string | null;
+  rarity?: string | null;
+  dropRate?: number | null;
+};
+
+type GoodsKujiLineupResponse = {
+  id: number;
+  kujiId: number;
+  goodsId: number | null;
+  kuji: {
+    id: number;
+    name: string;
+  };
 };
 
 type GoodsEditPageProps = {
@@ -35,9 +94,14 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
   const [goodsId, setGoodsId] = useState('');
   const [ipList, setIpList] = useState<IpItem[]>([]);
   const [ipEventList, setIpEventList] = useState<IpEventItem[]>([]);
+  const [kujiList, setKujiList] = useState<KujiItem[]>([]);
+  const [manufacturerList, setManufacturerList] = useState<ManufacturerItem[]>([]);
 
   const [ipId, setIpId] = useState('');
-  const [ipEventId, setIpEventId] = useState('');
+  const [eventId, setEventId] = useState('');
+  const [kujiId, setKujiId] = useState('');
+  const [kujiLineupId, setKujiLineupId] = useState('');
+  const [companyId, setCompanyId] = useState('');
   const [name, setName] = useState('');
   const [goodsType, setGoodsType] = useState('');
   const [saleType, setSaleType] = useState('SINGLE');
@@ -57,6 +121,7 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
       dropRate: '',
     },
   ]);
+  const [kujiLineupList, setKujiLineupList] = useState<KujiLineupItem[]>([]);
 
   const [pageLoading, setPageLoading] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -70,12 +135,44 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
     return ipEventList.filter((ipEvent) => String(ipEvent.ipId) === ipId);
   }, [ipEventList, ipId]);
 
+  const filteredKujiList = useMemo(() => {
+    if(!ipId) {
+      return [];
+    }
+
+    return kujiList.filter((kuji) => String(kuji.ipId) === ipId);
+  }, [kujiList, ipId]);
+
   const displayOfficialPrice =
     officialPrice === '' ? '' : Number(officialPrice).toLocaleString('ko-KR');
 
   const handleChangeIp = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setIpId(event.target.value);
-    setIpEventId('');
+    setEventId('');
+    setKujiId('');
+    setKujiLineupId('');
+  };
+
+  const handleChangeIpEvent = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedEventId = event.target.value;
+
+    setEventId(selectedEventId);
+
+    if(selectedEventId) {
+      setKujiId('');
+      setKujiLineupId('');
+    }
+  };
+
+  const handleChangeKuji = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedKujiId = event.target.value;
+
+    setKujiId(selectedKujiId);
+    setKujiLineupId('');
+
+    if(selectedKujiId) {
+      setEventId('');
+    }
   };
 
   const handleChangeOfficialPrice = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,13 +248,47 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
       throw new Error(data.message || 'IP 이벤트 목록을 불러오지 못했습니다.');
     }
 
-    const normalizedList = data.map((ipEvent: any) => ({
+    const normalizedList = data.map((ipEvent: IpEventResponse) => ({
       id: ipEvent.id,
       ipId: ipEvent.ipId,
       name: ipEvent.name,
     }));
 
     setIpEventList(normalizedList);
+  };
+
+  const getManufacturerList = async () => {
+    const response = await fetch('/api/companies', {
+      method: 'GET',
+    });
+
+    const data = await response.json();
+
+    if(!response.ok) {
+      throw new Error(data.message || '제조사 목록을 불러오지 못했습니다.');
+    }
+
+    setManufacturerList(data);
+  };
+
+  const getKujiList = async () => {
+    const response = await fetch('/api/kujis', {
+      method: 'GET',
+    });
+
+    const data = await response.json();
+
+    if(!response.ok) {
+      throw new Error(data.message || '쿠지 목록을 불러오지 못했습니다.');
+    }
+
+    const normalizedList = data.map((kuji: KujiResponse) => ({
+      id: kuji.id,
+      ipId: kuji.ipId,
+      name: kuji.name,
+    }));
+
+    setKujiList(normalizedList);
   };
 
   const getGoodsDetail = async (id: string) => {
@@ -172,12 +303,21 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
     }
 
     setIpId(data.ipId ? String(data.ipId) : '');
+    setCompanyId(data.companyId ? String(data.companyId) : '');
 
-    setIpEventId(
+    setEventId(
       data.eventGoods?.[0]?.event?.id
         ? String(data.eventGoods[0].event.id)
         : ''
     );
+
+    const linkedLineup = data.kujiLineups?.[0] as GoodsKujiLineupResponse | undefined;
+
+    if(linkedLineup) {
+      setKujiId(String(linkedLineup.kuji.id));
+      setKujiLineupId(String(linkedLineup.id));
+      setEventId('');
+    }
 
     setName(data.name || '');
     setGoodsType(data.goodsType || '');
@@ -199,7 +339,7 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
 
     if(data.goodsItems && data.goodsItems.length > 0) {
       setItems(
-        data.goodsItems.map((item: any) => ({
+        data.goodsItems.map((item: GoodsItemResponse) => ({
           name: item.name || '',
           characterName: item.characterName || '',
           imageUrl: item.imageUrl || '',
@@ -227,6 +367,8 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
         await Promise.all([
           getIpList(),
           getIpEventList(),
+          getKujiList(),
+          getManufacturerList(),
           getGoodsDetail(id),
         ]);
       } catch(error) {
@@ -244,11 +386,44 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
     init();
   }, [params]);
 
+  useEffect(() => {
+    const getKujiLineupList = async () => {
+      if(!kujiId) {
+        setKujiLineupList([]);
+        setKujiLineupId('');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/kujis/${kujiId}`, {
+          method: 'GET',
+        });
+        const data = await response.json();
+
+        if(!response.ok) {
+          setMessage(data.message || '쿠지 라인업을 불러오지 못했습니다.');
+          return;
+        }
+
+        setKujiLineupList((data as KujiDetailResponse).lineups);
+      } catch {
+        setMessage('쿠지 라인업 조회 중 오류가 발생했습니다.');
+      }
+    };
+
+    getKujiLineupList();
+  }, [kujiId]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if(!goodsId || !ipId || !name) {
       setMessage('IP와 굿즈 이름을 입력해주세요.');
+      return;
+    }
+
+    if(kujiId && !kujiLineupId) {
+      setMessage('쿠지를 선택한 경우 쿠지 라인업도 선택해주세요.');
       return;
     }
 
@@ -270,7 +445,9 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
         },
         body: JSON.stringify({
           ipId: Number(ipId),
-          eventId: ipEventId === '' ? null : Number(ipEventId),
+          eventId: eventId === '' ? null : Number(eventId),
+          kujiLineupId: kujiLineupId === '' ? null : Number(kujiLineupId),
+          companyId: companyId === '' ? null : Number(companyId),
           name,
           goodsType,
           saleType,
@@ -357,14 +534,78 @@ export default function GoodsEditPage({ params }: GoodsEditPageProps) {
           <div style={styles.field}>
             <label style={styles.label}>IP 이벤트</label>
             <select
-              style={styles.input}
-              value={ipEventId}
-              onChange={(event) => setIpEventId(event.target.value)}
+              style={{
+                ...styles.input,
+                ...(kujiId ? styles.disabledInput : {}),
+              }}
+              value={eventId}
+              onChange={handleChangeIpEvent}
+              disabled={Boolean(kujiId)}
             >
               <option value="">선택 안 함</option>
               {filteredIpEventList.map((ipEvent) => (
                 <option key={ipEvent.id} value={ipEvent.id}>
                   {ipEvent.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>쿠지</label>
+            <select
+              style={{
+                ...styles.input,
+                ...(eventId ? styles.disabledInput : {}),
+              }}
+              value={kujiId}
+              onChange={handleChangeKuji}
+              disabled={Boolean(eventId)}
+            >
+              <option value="">선택 안 함</option>
+              {filteredKujiList.map((kuji) => (
+                <option key={kuji.id} value={kuji.id}>
+                  {kuji.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>쿠지 라인업</label>
+            <select
+              style={{
+                ...styles.input,
+                ...(!kujiId || eventId ? styles.disabledInput : {}),
+              }}
+              value={kujiLineupId}
+              onChange={(event) => setKujiLineupId(event.target.value)}
+              disabled={!kujiId || Boolean(eventId)}
+            >
+              <option value="">선택 안 함</option>
+              {kujiLineupList.map((lineup) => (
+                <option
+                  key={lineup.id}
+                  value={lineup.id}
+                  disabled={Boolean(lineup.goodsId) && String(lineup.id) !== kujiLineupId}
+                >
+                  {formatKujiLineupLabel(lineup)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>제조사</label>
+            <select
+              style={styles.input}
+              value={companyId}
+              onChange={(event) => setCompanyId(event.target.value)}
+            >
+              <option value="">선택 안 함</option>
+              {manufacturerList.map((manufacturer) => (
+                <option key={manufacturer.id} value={manufacturer.id}>
+                  {manufacturer.name}
                 </option>
               ))}
             </select>

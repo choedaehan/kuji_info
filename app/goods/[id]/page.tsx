@@ -37,10 +37,27 @@ type GoodsDetail = {
     id: number;
     name: string;
   } | null;
-  ipEvent?: {
+  company?: {
     id: number;
     name: string;
   } | null;
+  eventGoods: {
+    event: {
+      id: number;
+      name: string;
+    };
+  }[];
+  kujiLineups: {
+    id: number;
+    prizeName: string | null;
+    prizeType: string | null;
+    grade: string | null;
+    quantity: number | null;
+    kuji: {
+      id: number;
+      name: string;
+    };
+  }[];
   goodsItems: GoodsItem[];
 };
 
@@ -156,20 +173,24 @@ export default function GoodsDetailPage({ params }: GoodsDetailPageProps) {
     );
   }
 
+  const eventNames = goods.eventGoods.map((eventGoods) => eventGoods.event.name);
+  const kujiLineupNames = goods.kujiLineups.map((lineup) =>
+    `${lineup.kuji.name} / ${lineup.grade || '-'} / ${lineup.prizeType || '-'} / ${lineup.prizeName || goods.name}`
+  );
+
   return (
     <div style={styles.page}>
       <div style={styles.container}>
         <div style={styles.header}>
           <div>
+            <Link href="/goods" style={styles.backLink}>
+              ← 목록
+            </Link>
             <h1 style={styles.title}>굿즈 상세</h1>
             <p style={styles.subText}>ID: {goods.id}</p>
           </div>
 
           <div style={styles.headerButtonGroup}>
-            <Link href="/goods" style={styles.linkButton}>
-              목록
-            </Link>
-
             <Link href={`/goods/${goods.id}/edit`} style={styles.editButton}>
               수정
             </Link>
@@ -194,7 +215,15 @@ export default function GoodsDetailPage({ params }: GoodsDetailPageProps) {
         <div style={styles.detailBox}>
           <DetailRow label="상품명" value={goods.name} />
           <DetailRow label="IP" value={goods.ip?.name ?? '-'} />
-          <DetailRow label="이벤트" value={goods.ipEvent?.name ?? '-'} />
+          <DetailRow label="제조사" value={goods.company?.name ?? '-'} />
+          <DetailRow
+            label="이벤트"
+            value={eventNames.length > 0 ? eventNames.join(', ') : '-'}
+          />
+          <DetailRow
+            label="쿠지 라인업"
+            value={kujiLineupNames.length > 0 ? kujiLineupNames.join(', ') : '-'}
+          />
           <DetailRow label="굿즈 종류" value={goods.goodsType || '-'} />
           <DetailRow label="판매 방식" value={getSaleTypeLabel(goods.saleType)} />
           <DetailRow
@@ -387,6 +416,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '24px',
     fontWeight: 700,
     margin: 0,
+  },
+  backLink: {
+    display: 'inline-block',
+    marginBottom: '12px',
+    color: '#374151',
+    textDecoration: 'none',
+    fontSize: '14px',
+    fontWeight: 600,
   },
   subText: {
     margin: '8px 0 0',

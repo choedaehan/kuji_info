@@ -1,9 +1,25 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@/app/generated/prisma/client';
+
+type GoodsItemPayload = {
+  name: string;
+  characterName?: string | null;
+  imageUrl?: string | null;
+  rarity?: string | null;
+  dropRate?: number | null;
+  sortOrder?: number;
+};
+
+type KujiLineupLinkPayload = {
+  goodsId: number;
+  ipId: number | string;
+  kujiLineupId?: number | string | null;
+};
 
 // 굿즈 상세 조회
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -20,9 +36,18 @@ export async function GET(
         orderBy: { sortOrder: 'asc' },
       },
       ip: true,
+      company: true,
       eventGoods: {
         include: {
           event: true,
+        },
+      },
+      kujiLineups: {
+        include: {
+          kuji: true,
+        },
+        orderBy: {
+          sortOrder: 'asc',
         },
       },
     },
@@ -52,7 +77,9 @@ export async function PATCH(
 
     const {
       ipId,
-      ipEventId,
+      eventId,
+      kujiLineupId,
+      companyId,
       name,
       goodsType,
       saleType,
@@ -72,6 +99,13 @@ export async function PATCH(
       );
     }
 
+    if (eventId && kujiLineupId) {
+      return NextResponse.json(
+        { message: '이벤트와 쿠지는 동시에 연결할 수 없습니다.' },
+        { status: 400 }
+      );
+    }
+
     if (!items || items.length === 0) {
       return NextResponse.json(
         { message: '굿즈 아이템이 최소 1개 필요합니다.' },
@@ -85,6 +119,7 @@ export async function PATCH(
         where: { id: goodsId },
         data: {
           ipId: Number(ipId),
+          companyId: companyId ? Number(companyId) : null,
           name,
           goodsType: goodsType || null,
           saleType: saleType || 'SINGLE',
@@ -102,12 +137,36 @@ export async function PATCH(
         where: { goodsId },
       });
 
+      await tx.kujiLineup.updateMany({
+        where: { goodsId },
+        data: {
+          goodsId: null,
+        },
+      });
+
       // 3. 새 이벤트 연결 생성
-      if (ipEventId) {
+      if (eventId) {
         await tx.eventGoods.create({
           data: {
             goodsId,
-            eventId: Number(ipEventId),
+            eventId: Number(eventId),
+          },
+        });
+      }
+
+      if (kujiLineupId) {
+        await validateKujiLineup(tx, {
+          goodsId,
+          ipId,
+          kujiLineupId,
+        });
+
+        await tx.kujiLineup.update({
+          where: {
+            id: Number(kujiLineupId),
+          },
+          data: {
+            goodsId,
           },
         });
       }
@@ -119,7 +178,7 @@ export async function PATCH(
 
       // 5. 새 GoodsItem 생성
       await tx.goodsItem.createMany({
-        data: items.map((item: any, index: number) => ({
+        data: (items as GoodsItemPayload[]).map((item, index) => ({
           goodsId,
           name: item.name,
           characterName: item.characterName || null,
@@ -136,7 +195,7 @@ export async function PATCH(
     console.error(error);
 
     return NextResponse.json(
-      { message: '굿즈 수정 실패' },
+      { message: error instanceof Error ? error.message : '굿즈 수정 실패' },
       { status: 500 }
     );
   }
@@ -144,7 +203,7 @@ export async function PATCH(
 
 // 굿즈 삭제
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -158,6 +217,13 @@ export async function DELETE(
     await prisma.$transaction(async (tx) => {
       await tx.eventGoods.deleteMany({
         where: { goodsId },
+      });
+
+      await tx.kujiLineup.updateMany({
+        where: { goodsId },
+        data: {
+          goodsId: null,
+        },
       });
 
       await tx.goodsItem.deleteMany({
@@ -178,4 +244,32 @@ export async function DELETE(
       { status: 500 }
     );
   }
+}
+
+async function validateKujiLineup(
+  tx: Prisma.TransactionClient,
+  { goodsId, ipId, kujiLineupId }: KujiLineupLinkPayload
+) {
+  const lineup = await tx.kujiLineup.findUnique({
+    where: {
+      id: Number(kujiLineupId),
+    },
+    include: {
+      kuji: true,
+    },
+  });
+
+  if (!lineup) {
+    throw new Error('선택한 쿠지 라인업을 찾을 수 없습니다.');
+  }
+
+  if (lineup.kuji.ipId !== Number(ipId)) {
+    throw new Error('굿즈 IP와 쿠지 라인업의 IP가 다릅니다.');
+  }
+
+  if (lineup.goodsId && lineup.goodsId !== goodsId) {
+    throw new Error('이미 다른 굿즈에 연결된 쿠지 라인업입니다.');
+  }
+
+  return lineup;
 }

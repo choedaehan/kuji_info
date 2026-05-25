@@ -20,6 +20,7 @@ model Ip {
   updatedAt    DateTime  @updatedAt
   goods        Goods[]
   ipEvents     IpEvent[]
+  kujis        Kuji[]
 
   @@index([name])
   @@map("ips")
@@ -54,7 +55,8 @@ model Goods {
   ip                Ip           @relation(fields: [ipId], references: [id])
   goodsItems        GoodsItem[]
   companyId         Int?
-  company           Company? @relation(fields: [companyId], references: [id])
+  company           Company?     @relation(fields: [companyId], references: [id])
+  kujiLineups       KujiLineup[]
 
   @@index([ipId])
   @@index([name])
@@ -109,6 +111,47 @@ model EventGoods {
   @@id([eventId, goodsId])
   @@index([goodsId])
   @@map("event_goods")
+}
+
+model Kuji {
+  id               Int          @id @default(autoincrement())
+  ipId             Int
+  name             String
+  japanPricePerTry Int?
+  koreaPricePerTry Int?
+  totalCount       Int?
+  japanReleaseDate DateTime?
+  koreaReleaseDate DateTime?
+  officialUrl      String?
+  description      String?      @db.Text
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  ip               Ip           @relation(fields: [ipId], references: [id])
+  lineups          KujiLineup[]
+
+  @@index([ipId])
+  @@index([name])
+  @@map("kujis")
+}
+
+model KujiLineup {
+  id        Int      @id @default(autoincrement())
+  kujiId    Int
+  goodsId   Int?
+  prizeName String?
+  prizeType String?
+  grade     String?
+  quantity  Int?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  kuji      Kuji     @relation(fields: [kujiId], references: [id], onDelete: Cascade)
+  goods     Goods?   @relation(fields: [goodsId], references: [id], onDelete: SetNull)
+
+  @@index([kujiId])
+  @@index([goodsId])
+  @@index([grade])
+  @@map("kuji_lineups")
 }
 
 enum SaleType {

@@ -41,7 +41,15 @@ export default function RootLayout({
             fontWeight: 600,
           }}
         >
-          🎰 Kuji
+          <Link
+            href="/"
+            style={{
+              color: "#fff",
+              textDecoration: "none",
+            }}
+          >
+            Goods Archive
+          </Link>
         </header>
 
         <div style={{ display: "flex", minHeight: "calc(100vh - 56px)" }}>
@@ -81,18 +89,12 @@ export default function RootLayout({
 function Nav() {
   return (
     <nav style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <NavItem href="/">메인</NavItem>
-
       <Section title="관리">
         <NavItem href="/ips">IP 관리</NavItem>
+        <NavItem href="/companies">제조사 관리</NavItem>
         <NavItem href="/ip-events">이벤트 관리</NavItem>
         <NavItem href="/goods">굿즈 관리</NavItem>
-        
-        <NavItem href="/kuji-series/new">쿠지 시리즈 등록</NavItem>
-        <NavItem href="/kuji-prize/new">상품 등록</NavItem>
-        <NavItem href="/kuji-observation/new">
-          Observation 입력
-        </NavItem>
+        <NavItem href="/kujis">쿠지 관리</NavItem>
       </Section>
     </nav>
   );
